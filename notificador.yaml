@@ -131,16 +131,17 @@ trigger:
     id: scheduled_check
     value_template: >
       {% set times = valid_times %}
+      {% set result = false %}
       {% if times | length > 0 %}
         {% set now_hm = now().strftime('%H:%M') %}
         {% set now_hms = now().strftime('%H:%M:%S') %}
         {% for time in times %}
           {% if time == now_hm or time == now_hms %}
-            {{ true }}
+            {% set result = true %}
           {% endif %}
         {% endfor %}
       {% endif %}
-      {{ false }}
+      {{ result }}
   - platform: event
     id: manual_test
     event_type: horta_test_notification
