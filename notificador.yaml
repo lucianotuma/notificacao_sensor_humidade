@@ -1,25 +1,19 @@
 blueprint:
-  name: "Horta — Umidade baixa (otimizado com múltiplas melhorias)"
-  description: >
-    Versão otimizada: Envia notificações móveis quando sensores de umidade estiverem abaixo dos limites.
-    Melhorias incluem: trigger eficiente, validação de horários, controle anti-spam, modo teste,
-    logs detalhados e mensagens mais informativas. Define limites por sensor, múltiplos horários
-    e dispositivos para notificação.
+  name: "Horta - Umidade baixa (otimizado com múltiplas melhorias)"
+  description: "Versão otimizada: Envia notificações móveis quando sensores de umidade estiverem abaixo dos limites. Melhorias incluem trigger eficiente, validação de horários, controle anti-spam, modo teste, logs detalhados e mensagens mais informativas."
   domain: automation
-  source_url: https://github.com/lucianotuma/notificacao_sensor_humidade/
-
+  source_url: https://github.com/lucianotuma/notificacao_sensor_humidade
   input:
     moisture_sensors:
-      name: Sensores de umidade (solo)
-      description: Selecione um ou mais sensores (valor em %).
+      name: Sensores de umidade do solo
+      description: "Selecione um ou mais sensores (valor em porcentagem)."
       selector:
         entity:
           domain: sensor
           multiple: true
-
     default_threshold:
       name: Limite padrão (%)
-      description: Valor usado para qualquer sensor que não tenha override específico.
+      description: "Valor usado para qualquer sensor que não tenha override específico."
       default: 50
       selector:
         number:
@@ -27,58 +21,42 @@ blueprint:
           max: 100
           mode: slider
           unit_of_measurement: "%"
-
     per_entity_thresholds:
       name: Limites por sensor (opcional)
-      description: >
-        Mapa entidade ➜ limite. Exemplo:
-        sensor.tomate_umidade: 55
-        sensor.cebolinha_umidade: 45
-        sensor.alface_umidade: 60
-        (Deixe vazio para usar apenas o limite padrão.)
+      description: 'Mapa no formato JSON. Exemplo: {"sensor.tomate_umidade": 55, "sensor.cebolinha_umidade": 45}'
       default: {}
       selector:
         object: {}
-
     schedule_times:
-      name: Horários do dia (lista)
-      description: >
-        Informe 1 ou mais horários separados por vírgula, no formato HH:MM ou HH:MM:SS.
-        Ex.: 07:30, 13:00, 20:15  → isso gera até 3 notificações por dia.
-        IMPORTANTE: Horários inválidos serão ignorados.
+      name: Horários do dia
+      description: "Horários separados por vírgula (HH:MM ou HH:MM:SS). Ex: 07:30, 13:00, 20:15"
       default: "09:00, 18:00"
       selector:
         text: {}
-
     notify_devices:
-      name: Celulares a notificar (App Companion)
-      description: Selecione um ou mais dispositivos integrados via mobile_app.
+      name: Celulares a notificar
+      description: "Selecione dispositivos com o app companion instalado."
       selector:
         device:
           multiple: true
           integration: mobile_app
-
     title:
       name: Título da notificação
       default: "🌱 Horta: umidade baixa"
       selector:
         text: {}
-
     decimals:
       name: Casas decimais
-      description: Quantas casas decimais exibir nos valores.
+      description: "Quantas casas decimais exibir nos valores."
       default: 0
       selector:
         number:
           min: 0
           max: 3
           mode: box
-
     min_time_between_notifications:
-      name: Tempo mínimo entre notificações (minutos)
-      description: >
-        Evita spam de notificações. Define o intervalo mínimo entre notificações.
-        Recomendado: 60 minutos ou mais.
+      name: Tempo mínimo entre notificações (min)
+      description: "Evita spam. Define intervalo mínimo entre notificações."
       default: 60
       selector:
         number:
@@ -86,37 +64,27 @@ blueprint:
           max: 480
           mode: slider
           unit_of_measurement: "min"
-
     test_mode:
       name: Modo de teste
-      description: >
-        Quando ativado, envia notificação mesmo se todos os sensores estiverem OK.
-        Útil para testar se a automação está funcionando.
+      description: "Envia notificação mesmo se sensores estiverem OK."
       default: false
       selector:
         boolean: {}
-
     enable_logging:
       name: Registrar eventos no logbook
-      description: Salva registro de todas as verificações e notificações no logbook do HA.
+      description: "Salva registro de verificações e notificações."
       default: true
       selector:
         boolean: {}
-
     notification_actions:
-      name: Ações na notificação (opcional)
-      description: >
-        Adiciona botões de ação rápida na notificação.
-        Ex.: Ligar irrigação, ver dashboard, etc.
+      name: Ações na notificação
+      description: "Adiciona botões de ação rápida na notificação."
       default: true
       selector:
         boolean: {}
-
     critical_threshold_offset:
       name: Offset para nível crítico (%)
-      description: >
-        Quando a umidade estiver X% abaixo do limite, marca como CRÍTICO.
-        Ex.: Se limite = 50% e offset = 15%, então crítico = 35%
+      description: "Diferença para marcar como crítico. Ex: limite 50% e offset 15% = crítico em 35%"
       default: 15
       selector:
         number:
@@ -128,7 +96,6 @@ blueprint:
 mode: single
 max_exceeded: silent
 
-# ---------- Variáveis ----------
 variables:
   sensors: !input moisture_sensors
   default_threshold: !input default_threshold
@@ -142,11 +109,7 @@ variables:
   enable_logging: !input enable_logging
   notification_actions: !input notification_actions
   critical_offset: !input critical_threshold_offset
-  
-  # Helper para rastrear última notificação
   last_notification_helper: "input_datetime.horta_ultima_notificacao"
-  
-  # Validação e parsing dos horários
   valid_times: >
     {% set raw = (schedule_times_txt | string).strip() %}
     {% if not raw %}
@@ -163,9 +126,7 @@ variables:
       {{ valid.times }}
     {% endif %}
 
-# ---------- Gatilhos ----------
 trigger:
-  # Gatilho otimizado: só dispara nos horários configurados
   - platform: template
     id: scheduled_check
     value_template: >
@@ -180,21 +141,14 @@ trigger:
         {% endfor %}
       {% endif %}
       {{ false }}
-
-  # Gatilho manual para testes
   - platform: event
     id: manual_test
     event_type: horta_test_notification
 
-# ---------- Condições ----------
 condition:
-  # Verifica se há horários válidos configurados
   - condition: template
     alias: "Há horários válidos configurados?"
-    value_template: >
-      {{ valid_times | length > 0 or trigger.id == 'manual_test' }}
-  
-  # Verifica intervalo mínimo entre notificações (exceto modo teste)
+    value_template: "{{ valid_times | length > 0 or trigger.id == 'manual_test' }}"
   - condition: template
     alias: "Respeitando intervalo mínimo?"
     value_template: >
@@ -213,9 +167,7 @@ condition:
         {% endif %}
       {% endif %}
 
-# ---------- Ações ----------
 action:
-  # Log de início de verificação
   - choose:
       - conditions:
           - condition: template
@@ -224,17 +176,10 @@ action:
           - service: logbook.log
             data:
               name: "Horta - Verificação"
-              message: >
-                Iniciando verificação de {{ sensors | length }} sensor(es) de umidade.
-                Modo teste: {{ 'SIM' if test_mode else 'NÃO' }}
-
-  # Monta a lista detalhada de sensores e seus estados
+              message: "Iniciando verificação de {{ sensors | length }} sensor(es). Modo teste: {{ 'SIM' if test_mode else 'NÃO' }}"
   - variables:
       sensor_analysis: >
-        {% set expanded = expand(sensors)
-             | selectattr('state','is_number')
-             | rejectattr('state','in',['unknown','unavailable'])
-             | list %}
+        {% set expanded = expand(sensors) | selectattr('state','is_number') | rejectattr('state','in',['unknown','unavailable']) | list %}
         {% set below = [] %}
         {% set critical = [] %}
         {% set ok = [] %}
@@ -246,13 +191,7 @@ action:
           {% endif %}
           {% set current_value = e.state | float(0) %}
           {% set critical_limit = thr - critical_offset %}
-          {% set sensor_info = dict(
-            name=e.name,
-            entity_id=eid,
-            value=current_value,
-            threshold=thr,
-            critical_limit=critical_limit
-          ) %}
+          {% set sensor_info = dict(name=e.name, entity_id=eid, value=current_value, threshold=thr, critical_limit=critical_limit) %}
           {% if current_value < critical_limit %}
             {% set critical = critical + [sensor_info] %}
           {% elif current_value < thr %}
@@ -262,122 +201,91 @@ action:
           {% endif %}
         {% endfor %}
         {{ dict(below=below, critical=critical, ok=ok, total=expanded|length) }}
-
-  # Determina se deve enviar notificação
   - variables:
-      should_notify: >
-        {{ (sensor_analysis.below | length > 0 or 
-            sensor_analysis.critical | length > 0 or 
-            test_mode or 
-            trigger.id == 'manual_test') }}
-      
-      all_sensors_low: >
-        {{ sensor_analysis.below + sensor_analysis.critical }}
-
+      should_notify: "{{ (sensor_analysis.below | length > 0 or sensor_analysis.critical | length > 0 or test_mode or trigger.id == 'manual_test') }}"
+      all_sensors_low: "{{ sensor_analysis.below + sensor_analysis.critical }}"
   - choose:
-      # Envia notificação se necessário
       - conditions:
           - condition: template
             value_template: "{{ should_notify }}"
         sequence:
-          # Prepara mensagem detalhada
           - variables:
               notification_message: >
                 {% if test_mode and all_sensors_low | length == 0 %}
-                  🧪 MODO TESTE ATIVO
-                  Todos os {{ sensor_analysis.total }} sensores estão com umidade adequada.
-                  
-                  Status atual:
-                  {% for it in sensor_analysis.ok[:5] -%}
-                  ✅ {{ it.name }}: {{ it.value | round(decimals) }}% (limite: {{ it.threshold }}%)
-                  {% endfor -%}
-                  {% if sensor_analysis.ok | length > 5 %}
-                  ... e mais {{ sensor_analysis.ok | length - 5 }} sensor(es) OK
-                  {% endif %}
+                🧪 MODO TESTE ATIVO
+                Todos os {{ sensor_analysis.total }} sensores estão com umidade adequada.
+                
+                Status atual:
+                {% for it in sensor_analysis.ok[:5] -%}
+                ✅ {{ it.name }}: {{ it.value | round(decimals) }}% (limite: {{ it.threshold }}%)
+                {% endfor -%}
+                {% if sensor_analysis.ok | length > 5 %}
+                ... e mais {{ sensor_analysis.ok | length - 5 }} sensor(es) OK
+                {% endif %}
                 {% else %}
-                  {% if sensor_analysis.critical | length > 0 %}
-                  🚨 CRÍTICO - Irrigação urgente necessária!
-                  
-                  Sensores críticos:
-                  {% for it in sensor_analysis.critical -%}
-                  ⛔ {{ it.name }}: {{ it.value | round(decimals) }}% (limite: {{ it.threshold }}%, crítico: <{{ it.critical_limit }}%)
-                  {% endfor -%}
-                  {% endif %}
-                  
-                  {% if sensor_analysis.below | length > 0 %}
-                  {% if sensor_analysis.critical | length == 0 %}⚠️ Sensores abaixo do limite:{% endif %}
-                  {% if sensor_analysis.critical | length > 0 %}
-                  Outros sensores baixos:{% endif %}
-                  {% for it in sensor_analysis.below -%}
-                  🟡 {{ it.name }}: {{ it.value | round(decimals) }}% (limite: {{ it.threshold }}%)
-                  {% endfor -%}
-                  {% endif %}
-                  
-                  {% if sensor_analysis.ok | length > 0 and all_sensors_low | length <= 3 %}
-                  
-                  Sensores OK:
-                  {% for it in sensor_analysis.ok[:3] -%}
-                  ✅ {{ it.name }}: {{ it.value | round(decimals) }}%
-                  {% endfor -%}
-                  {% endif %}
-                  
-                  📊 Resumo: {{ all_sensors_low | length }}/{{ sensor_analysis.total }} sensor(es) precisam de água
+                {% if sensor_analysis.critical | length > 0 %}
+                🚨 CRÍTICO - Irrigação urgente necessária!
+                
+                Sensores críticos:
+                {% for it in sensor_analysis.critical -%}
+                ⛔ {{ it.name }}: {{ it.value | round(decimals) }}% (limite: {{ it.threshold }}%, crítico: <{{ it.critical_limit }}%)
+                {% endfor -%}
                 {% endif %}
-              
-              notification_data: >
-                {% set data = namespace(base={}) %}
-                {% set data.base = {
-                  'title': title if sensor_analysis.critical | length == 0 else '🚨 ' + title + ' - CRÍTICO',
-                  'message': notification_message,
-                  'data': {
-                    'priority': 'high' if sensor_analysis.critical | length > 0 else 'normal',
-                    'tag': 'horta-umidade',
-                    'group': 'horta',
-                    'color': '#ff0000' if sensor_analysis.critical | length > 0 else '#ff9800'
-                  }
-                } %}
-                {% if notification_actions %}
-                  {% set data.base = dict(data.base, **{
-                    'data': dict(data.base.data, **{
-                      'actions': [
-                        {
-                          'action': 'irrigate_all',
-                          'title': '💧 Irrigar todos'
-                        },
-                        {
-                          'action': 'view_dashboard',
-                          'title': '📊 Ver dashboard'
-                        },
-                        {
-                          'action': 'snooze_1h',
-                          'title': '⏰ Adiar 1h'
-                        }
-                      ]
-                    })
-                  }) %}
+                
+                {% if sensor_analysis.below | length > 0 %}
+                {% if sensor_analysis.critical | length == 0 %}⚠️ Sensores abaixo do limite:{% endif %}
+                {% if sensor_analysis.critical | length > 0 %}
+                Outros sensores baixos:{% endif %}
+                {% for it in sensor_analysis.below -%}
+                🟡 {{ it.name }}: {{ it.value | round(decimals) }}% (limite: {{ it.threshold }}%)
+                {% endfor -%}
                 {% endif %}
-                {{ data.base }}
-
-          # Envia para cada dispositivo
+                
+                {% if sensor_analysis.ok | length > 0 and all_sensors_low | length <= 3 %}
+                
+                Sensores OK:
+                {% for it in sensor_analysis.ok[:3] -%}
+                ✅ {{ it.name }}: {{ it.value | round(decimals) }}%
+                {% endfor -%}
+                {% endif %}
+                
+                📊 Resumo: {{ all_sensors_low | length }}/{{ sensor_analysis.total }} sensor(es) precisam de água
+                {% endif %}
+              notification_title: >
+                {% if sensor_analysis.critical | length > 0 %}
+                  🚨 {{ title }} - CRÍTICO
+                {% else %}
+                  {{ title }}
+                {% endif %}
           - repeat:
               for_each: !input notify_devices
               sequence:
                 - domain: mobile_app
                   type: notify
                   device_id: "{{ repeat.item }}"
-                  title: "{{ notification_data.title }}"
-                  message: "{{ notification_data.message }}"
-                  data: "{{ notification_data.data }}"
-          
-          # Atualiza helper de última notificação
+                  title: "{{ notification_title }}"
+                  message: "{{ notification_message }}"
+                  data:
+                    priority: "{{ 'high' if sensor_analysis.critical | length > 0 else 'normal' }}"
+                    tag: "horta-umidade"
+                    group: "horta"
+                    color: "{{ '#ff0000' if sensor_analysis.critical | length > 0 else '#ff9800' }}"
+                    actions: >
+                      {% if notification_actions %}
+                        [
+                          {"action": "irrigate_all", "title": "💧 Irrigar todos"},
+                          {"action": "view_dashboard", "title": "📊 Ver dashboard"},
+                          {"action": "snooze_1h", "title": "⏰ Adiar 1h"}
+                        ]
+                      {% else %}
+                        []
+                      {% endif %}
           - service: input_datetime.set_datetime
             target:
               entity_id: "{{ last_notification_helper }}"
             data:
               datetime: "{{ now() }}"
             continue_on_error: true
-          
-          # Log da notificação enviada
           - choose:
               - conditions:
                   - condition: template
@@ -386,15 +294,7 @@ action:
                   - service: logbook.log
                     data:
                       name: "Horta - Notificação"
-                      message: >
-                        Notificação enviada para {{ notify_devices | length }} dispositivo(s).
-                        Sensores baixos: {{ sensor_analysis.below | length }},
-                        Críticos: {{ sensor_analysis.critical | length }},
-                        OK: {{ sensor_analysis.ok | length }}
-                      entity_id: "{{ sensors }}"
-                      domain: sensor
-
-      # Quando não há sensores com problema (e não é modo teste)
+                      message: "Notificação enviada. Baixos: {{ sensor_analysis.below | length }}, Críticos: {{ sensor_analysis.critical | length }}, OK: {{ sensor_analysis.ok | length }}"
       - conditions:
           - condition: template
             value_template: "{{ not should_notify and enable_logging }}"
@@ -402,12 +302,4 @@ action:
           - service: logbook.log
             data:
               name: "Horta - Verificação"
-              message: >
-                Todos os {{ sensor_analysis.total }} sensores estão com umidade adequada.
-                Nenhuma notificação necessária.
-
-# Nota: Para o helper funcionar, crie manualmente em:
-# Configurações > Dispositivos e Serviços > Auxiliares > Adicionar Auxiliar > Data e/ou hora
-# Nome: horta_ultima_notificacao
-# Tem data: sim
-# Tem hora: sim
+              message: "Todos os {{ sensor_analysis.total }} sensores OK. Nenhuma notificação necessária."
